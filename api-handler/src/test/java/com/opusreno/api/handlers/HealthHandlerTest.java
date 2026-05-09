@@ -17,8 +17,7 @@ class HealthHandlerTest {
     @BeforeEach
     void setUp() {
         mapper = new ObjectMapperFactory().create();
-        handler = new HealthHandler(mapper);
-        // direct construction, no Dagger needed for unit tests
+        handler = new HealthHandler();
     }
 
     @Test

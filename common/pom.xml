@@ -18,6 +18,12 @@
     </description>
 
     <dependencies>
+        <!-- Lambda event types (APIGatewayV2HTTPResponse used by Responses util) -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-lambda-java-events</artifactId>
+        </dependency>
+
         <!-- AWS SDK: DynamoDB + Enhanced Client + SQS -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
@@ -32,25 +38,7 @@
             <artifactId>sqs</artifactId>
         </dependency>
 
-        <!-- Dagger (shared CommonModule lives in this package) -->
-        <dependency>
-            <groupId>com.google.dagger</groupId>
-            <artifactId>dagger</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.google.dagger</groupId>
-            <artifactId>dagger-compiler</artifactId>
-        </dependency>
-
-        <!-- Jakarta Dependency Injection annotations (@Inject, @Singleton).
-             Dagger uses these for constructor injection. -->
-        <dependency>
-            <groupId>jakarta.inject</groupId>
-            <artifactId>jakarta.inject-api</artifactId>
-            <version>2.0.1</version>
-        </dependency>
-
-        <!-- Lombok -->
+<!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -106,6 +94,15 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
