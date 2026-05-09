@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
 import com.opusreno.api.handlers.HealthHandler;
 import com.opusreno.api.handlers.LeadsHandler;
+import com.opusreno.common.errors.DuplicateLeadException;
 import com.opusreno.common.errors.SpamDetectedException;
 import com.opusreno.common.errors.ValidationException;
 import com.opusreno.common.json.Responses;
@@ -40,6 +41,8 @@ public class RequestRouter {
             return Responses.badRequest("VALIDATION_ERROR", e.getDetails());
         } catch (SpamDetectedException e) {
             return Responses.badRequest("SPAM_DETECTED", List.of(e.getMessage()));
+        } catch (DuplicateLeadException e) {
+            return Responses.tooManyRequests(e.getMessage());
         } catch (Exception e) {
             log.error("unhandled exception", e);
             return Responses.serverError();

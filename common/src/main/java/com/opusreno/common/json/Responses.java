@@ -26,6 +26,10 @@ public final class Responses {
         return build(404, Map.of("error", "NOT_FOUND", "details", List.of(detail)));
     }
 
+    public static APIGatewayV2HTTPResponse tooManyRequests(String message) {
+        return build(429, Map.of("error", "TOO_MANY_REQUESTS", "message", message));
+    }
+
     public static APIGatewayV2HTTPResponse serverError() {
         return build(500, Map.of("error", "INTERNAL_ERROR"));
     }

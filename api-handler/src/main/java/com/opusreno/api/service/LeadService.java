@@ -1,14 +1,17 @@
 package com.opusreno.api.service;
 
 import com.opusreno.api.dto.LeadRequestDto;
+import com.opusreno.common.config.Constants;
 import com.opusreno.common.dao.LeadDao;
 import com.opusreno.common.domain.Lead;
+import com.opusreno.common.errors.DuplicateLeadException;
 import com.opusreno.common.queue.SqsPublisher;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Supplier;
 
@@ -50,6 +53,11 @@ public class LeadService {
         lead.setSessionId(dto.sessionId);
         lead.setCreatedAt(now);
 
+        int recentCount = leadDao.countRecentByPhone(lead.getPhone(), now.minus(Duration.ofHours(Constants.DEDUP_WINDOW_HOURS)));
+        if (recentCount >= Constants.DEDUP_MAX_LEADS_PER_PHONE) {
+            log.warn("rate limit reached for phone ending in {}", dto.phone.substring(dto.phone.length() - 4));
+            throw new DuplicateLeadException("Submission limit reached, please try again later");
+        }
         leadDao.save(lead);
         log.info("lead saved leadId={}", leadId);
 

@@ -8,6 +8,7 @@ import com.opusreno.common.domain.LeadScope;
 import com.opusreno.common.domain.LeadSource;
 import com.opusreno.common.domain.LeadTimeline;
 import com.opusreno.common.domain.LeadType;
+import com.opusreno.common.errors.DuplicateLeadException;
 import com.opusreno.common.queue.SqsPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,9 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -43,6 +46,7 @@ class LeadServiceTest {
     @Test
     void acceptLead_happyPath_savesAndPublishes() {
         LeadRequestDto dto = validDto();
+        when(leadDao.countRecentByPhone(eq("+919876543210"), any())).thenReturn(0);
         when(publisher.publish(FIXED_ID)).thenReturn("msg-123");
 
         String leadId = service.acceptLead(dto);
@@ -75,6 +79,7 @@ class LeadServiceTest {
         dto.email = null;
         dto.area = null;
         dto.message = null;
+        when(leadDao.countRecentByPhone(eq("+919876543210"), any())).thenReturn(0);
 
         service.acceptLead(dto);
 
@@ -90,12 +95,48 @@ class LeadServiceTest {
     @Test
     void acceptLead_sqsFailure_stillReturnsLeadId() {
         LeadRequestDto dto = validDto();
+        when(leadDao.countRecentByPhone(eq("+919876543210"), any())).thenReturn(0);
         when(publisher.publish(any())).thenThrow(new RuntimeException("SQS down"));
 
         String leadId = service.acceptLead(dto);
 
         assertThat(leadId).isEqualTo(FIXED_ID);
         verify(leadDao).save(any(Lead.class));
+    }
+
+    @Test
+    void acceptLead_phoneBelowLimit_succeeds() {
+        LeadRequestDto dto = validDto();
+        when(leadDao.countRecentByPhone(eq("+919876543210"), any())).thenReturn(2);
+
+        String leadId = service.acceptLead(dto);
+
+        assertThat(leadId).isEqualTo(FIXED_ID);
+        verify(leadDao).save(any(Lead.class));
+    }
+
+    @Test
+    void acceptLead_phoneAtLimit_throwsDuplicateLeadException() {
+        LeadRequestDto dto = validDto();
+        when(leadDao.countRecentByPhone(eq("+919876543210"), any())).thenReturn(3);
+
+        assertThatThrownBy(() -> service.acceptLead(dto))
+                .isInstanceOf(DuplicateLeadException.class)
+                .hasMessageContaining("Submission limit reached");
+
+        verify(leadDao, never()).save(any());
+        verifyNoInteractions(publisher);
+    }
+
+    @Test
+    void acceptLead_phoneAboveLimit_throwsDuplicateLeadException() {
+        LeadRequestDto dto = validDto();
+        when(leadDao.countRecentByPhone(eq("+919876543210"), any())).thenReturn(5);
+
+        assertThatThrownBy(() -> service.acceptLead(dto))
+                .isInstanceOf(DuplicateLeadException.class);
+
+        verify(leadDao, never()).save(any());
     }
 
     private LeadRequestDto validDto() {
